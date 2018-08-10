@@ -1,0 +1,131 @@
+{% extends 'base.html' %} 
+
+{% block title %}
+Home
+{% endblock %} 
+
+{% block content %}
+<div class="body">
+  <div class="bx--tile">
+    <div class="tile-title">
+      Search
+    </div>
+    <div class="file-uploader">
+      <div class="bx--form-item form-content">
+        <strong class="bx--label form-content">Search by image</strong>
+        <p class="bx--label-description form-content">only .jpg and .png files.</p>
+        <div class="bx--file" data-file>
+          <label
+            for="file-import"
+            class="bx--file-btn bx--btn bx--btn--secondary"
+            role="button"
+            tabindex="0">Add file</label>
+          <input
+            type="file"
+            class="bx--file-input"
+            id="file-import"
+            data-file-uploader
+            data-target="[data-file-container]"
+            accept="image/*"
+          />
+          <div data-file-container class="bx--file-container"></div>
+          <button class="bx--btn bx--btn--primary" id="search-image" type="button">Search</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bx--grid">
+    <div class="bx--row" style="padding: 10px 0;">
+      <div class="bx--col-12">
+        <button class="bx--btn bx--btn--tertiary" type="button" id="reset" style="float: right;">
+          Reset
+          <svg width="13" height="16" viewBox="0 0 13 16">
+            <path d="M10.948 3L8.542.727 9.23 0 13 3.564 9.228 7.108l-.685-.729L11.075 4H6.5A5.5 5.5 0 1 0 12 9.5h1A6.5 6.5 0 1 1 6.5 3h4.448z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="bx--row">
+      {% for data in mongo_data %}
+      <div class="bx--col-xs-3" style="padding: 10px">
+        <div class="bx--tile">
+          <img src="http://localhost:5000/{{data.path}}" class="image"/>
+          <p style="text-align: center;">{{data.name}}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(document).ready(function() {
+      // initialize file uploader object of DOM
+      var fileUploader = CarbonComponents.FileUploader.create(document.querySelector('.bx--file'));
+      
+      // Listener for file import change
+      $('#file-import').change(function(e) {
+        // check to see if file is added
+        if(e.target.files.length > 0) {
+          $('#file-import').attr("disabled", true);
+        }
+
+        // add closing icons to list
+        fileUploader.setState('edit');
+
+        // add click listener 
+        document.querySelector('.bx--file-close').addEventListener('click', function(e) {
+          // clear out file input
+          document.querySelector('#file-import').value = null;
+          // enable file import button
+          $('#file-import').attr("disabled", false);
+        });
+      });
+
+      $('#reset').click(function(e) {
+        $(`.bx--col-xs-3`).css('display', 'block');
+      });
+
+      $('#search-image').click(function(e) {
+        if($('#file-import')[0].files.length > 0) {
+          var image = $('#file-import')[0].files[0];
+          // send image to backend to process to embedding
+          $.ajax({
+            url: 'http://wray1.fyre.ibm.com:5100',
+            type: 'POST',
+            data: image,
+            cache: false,
+            contentType: false,
+            processData: false,
+          }).done(function(data) {
+            var embedding = JSON.parse(data).embedding;
+            $.ajax({
+              url: 'http://localhost:5000/compare',
+              type: 'POST',
+              data: JSON.stringify({
+                'face': embedding
+              }),
+              contentType: 'json'
+            }).done(function(data) {
+              data = JSON.parse(data);
+              if(!data.matches.length) {
+                $(`.bx--col-xs-3`).css('display', 'none');
+              }
+              for(let item of data.matches) {
+                $(`.bx--col-xs-3:not(:contains(${item.name}))`).css('display', 'none');                
+              }
+              for(let item of data.matches) {
+                $(`.bx--col-xs-3:contains(${item.name})`).css('display', 'block');
+              }
+            });
+          });
+        } else {
+
+        }
+      });
+    });
+  </script>
+{% endblock %}

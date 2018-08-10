@@ -1,0 +1,27 @@
+<!doctype html>
+<title>IBM - {% block title %}{% endblock %}</title>
+<link rel="stylesheet" href="https://unpkg.com/carbon-components/css/carbon-components.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<section class="content">
+  <header>
+    <nav>
+      <div class="nav-title">
+        <a href="{{ url_for('index') }}">Facial Recognition</a>
+      </div>
+      <div class="nav-content">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('convert') }}">Convert</a>
+        <a href="{{ url_for('info') }}">Info</a>
+      </div>
+    </nav>
+    {% block header %}{% endblock %}
+  </header>
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+  {% block javascript %}
+    <script type="text/javascript" src="https://unpkg.com/carbon-components/scripts/carbon-components.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
+  {% endblock %}
+</section>

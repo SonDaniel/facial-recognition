@@ -1,0 +1,135 @@
+{% extends 'base.html' %} 
+
+{% block title %}
+Convert
+{% endblock %} 
+
+{% block content %}
+<div class="body">
+  <div class="bx--tile">
+    <div class="file-uploader">
+      <div class="bx--form-item form-content">
+        <strong class="bx--label form-content">Upload image</strong>
+        <p class="bx--label-description form-content">only .jpg and .png files.</p>
+        <div class="bx--file" data-file>
+          <label
+            for="file-upload"
+            class="bx--file-btn bx--btn bx--btn--secondary"
+            role="button"
+            tabindex="0">Add file</label>
+          <input
+            type="file"
+            class="bx--file-input"
+            id="file-upload"
+            data-file-uploader
+            data-target="[data-file-container]"
+            accept="image/*"
+          />
+          <div data-file-container class="bx--file-container"></div>
+          <button class="bx--btn bx--btn--primary" id="search-image" type="button">Convert &amp; Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-notification class="bx--inline-notification bx--inline-notification--error hide" role="alert" id="error-notification">
+    <div class="bx--inline-notification__details">
+      <svg class="bx--inline-notification__icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16zM3.293 4.707l8 8 1.414-1.414-8-8-1.414 1.414z" fill-rule="evenodd" />
+      </svg>
+      <div class="bx--inline-notification__text-wrapper">
+        <p class="bx--inline-notification__title">Error. Please try again later.</p>
+      </div>
+    </div>
+  </div>
+  <div data-notification class="bx--inline-notification bx--inline-notification--success hide" role="alert" id="success-notification">
+    <div class="bx--inline-notification__details">
+      <svg class="bx--inline-notification__icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16zM3.293 4.707l8 8 1.414-1.414-8-8-1.414 1.414z" fill-rule="evenodd" />
+      </svg>
+      <div class="bx--inline-notification__text-wrapper">
+        <p class="bx--inline-notification__title">Upload successful.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(document).ready(function() {
+      // initialize file uploader object of DOM
+      var fileUploader = CarbonComponents.FileUploader.create(document.querySelector('.bx--file'));
+      
+      // Listener for file import change
+      $('#file-upload').change(function(e) {
+        // check to see if file is added
+        if(e.target.files.length > 0) {
+          $('#file-upload').attr("disabled", true);
+        }
+
+        // add closing icons to list
+        fileUploader.setState('edit');
+
+        // add click listener 
+        document.querySelector('.bx--file-close').addEventListener('click', function(e) {
+          // clear out file input
+          document.querySelector('#file-upload').value = null;
+          // enable file import button
+          $('#file-upload').attr("disabled", false);
+        });
+      });
+
+      $('#search-image').click(function(e) {
+        if($('#file-upload')[0].files.length > 0) {
+          var image = $('#file-upload')[0].files[0];
+          // send image to backend to process to embedding
+          $.ajax({
+            url: 'http://wray1.fyre.ibm.com:5100',
+            type: 'POST',
+            data: image,
+            cache: false,
+            contentType: false,
+            processData: false,
+          }).done(function(data) {
+            data = JSON.parse(data);
+            if("NOFACE" in data) {
+              // TODO: show error
+              $('#error-notification').addClass('show');
+              setTimeout(function(e) {
+                $('#error-notification').removeClass('show');
+              }, 2000);
+            } else {
+              data['name'] = image.name;
+              var formData = new FormData();
+              formData.append('file', image);
+              formData.append('data', JSON.stringify(data));
+              $.ajax({
+                url: 'http://localhost:5000/save-embedding',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                  $('#success-notification').addClass('show');
+                  setTimeout(function(e) {
+                    $('#success-notification').removeClass('show');
+                  }, 2000);
+                },
+                error: function(err) {
+                  $('#error-notification').addClass('show');
+                  setTimeout(function(e) {
+                    $('#error-notification').removeClass('show');
+                  }, 2000);
+                }
+              });
+            }
+          });
+        } else {
+          console.log('nope. no file');
+          // Display some message that says no file selected
+        }
+      });
+    });
+  </script>
+{% endblock %}
